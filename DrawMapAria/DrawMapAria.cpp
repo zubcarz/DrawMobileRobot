@@ -31,8 +31,10 @@ int main(int argc, char **argv)
 	Aria::init();
 	ArArgumentParser parser(&argc, argv);
 	parser.loadDefaultArguments();
-	
+	//robot connector
 	ArRobotConnector robotConnector(&parser, &robot);
+	//laser connector
+	ArLaserConnector laserConnector(&parser, &robot, &robotConnector);
 
 	if (!robotConnector.connectRobot())
 	{
@@ -49,10 +51,6 @@ int main(int argc, char **argv)
 		Aria::exit(1);
 	}
 	printConsole("teleopActionsExample: Connected.", 2);
-
-
-	// Connector for laser rangefinders
-	ArLaserConnector laserConnector(&parser, &robot, &robotConnector);
 
 	// Connector for compasses
 	ArCompassConnector compassConnector(&parser);
@@ -103,6 +101,17 @@ int main(int argc, char **argv)
 
 	// run the robot, true means that the run will exit if connection lost
 	robot.runAsync(true);
+
+
+	if (!laserConnector.connectLasers())
+	{
+		ArLog::log(ArLog::Terse, "Could not connect to configured lasers. Exiting.");
+		Aria::exit(3);
+		return 3;
+	}
+
+
+	ArLog::log(ArLog::Normal, "Connected to all lasers.");
 
 	writeHead();
 	
