@@ -7,13 +7,22 @@
 //include lib of time
 #include <ctime>
 #include <cstdlib>
+// constructor create files of text
+#include <fstream>  
 
 using namespace std;
 
 void *printConsole(const char *message, int mode);
-void *delay(void);
+void *delay(const char *wait);
+void *printParametersRobot(void);
+void *writeDraw(int id, float time, double posX, double posY, double angTh);
+void *writeHead();
+void *clearOutput();
 
 static ArRobot robot;
+static int countRegisters;
+static float timeRegister;
+static const char secondsToDelay[] = "0.5";
 
 //Main Method
 int main(int argc, char **argv)
@@ -92,42 +101,29 @@ int main(int argc, char **argv)
 	//priority low
 	joydriveAct.setStopIfNoButtonPressed(false);
 
-/*
-	double xPosition = robot.getX();
-	double yPosition = robot.getY();
-	double thAngular = robot.getTh();
-
-	char posX[sizeof(xPosition)];
-	memcpy(&posX, &xPosition, sizeof(xPosition));
-
-	printConsole("Pos in X", 3);
-	printConsole(posX,3);
-	*/
-
-	
-
 	// run the robot, true means that the run will exit if connection lost
 	robot.runAsync(true);
 
-
-
+	writeHead();
+	
+	//print sample time 
+	std::cout << "Time to delay: " << secondsToDelay << std::endl;
+	
 	while (true) {
-		delay();
+		delay(secondsToDelay);
 	}
-
 
 	// Block execution of the main thread here and wait for the robot's task loop
 	// thread to exit (e.g. by robot disconnecting, escape key pressed, or OS
 	// signal)
 	robot.waitForRunExit();
-
+	
 	Aria::exit(0);
 	return 0;
-	
 }
 
 // view message in console 
-void *printConsole(const char *message, int mode) {
+void *printConsole(const char *message, int mode = 3) {
 	printf("-------------------------------------\n");
 	switch (mode) {
 		// highlight message
@@ -147,24 +143,94 @@ void *printConsole(const char *message, int mode) {
 	return NULL;
 }
 
-void *delay(void) {
+// view message in console 
+void *printConsole(string message, int mode = 3) {
+	printf("-------------------------------------\n");
+	switch (mode) {
+	case 3:
+		printf("Follow this command: %s", message);
+		printf("\n");
+		break;
+	}
+	printf("-------------------------------------\n");
+
+	return NULL;
+}
+
+void *delay(const char *wait) {
 	clock_t startTime = clock(); //Start timer
 	double secondsPassed;
-	double secondsToDelay = atof("0.5");
-	std::cout << "Time to delay: " << secondsToDelay << std::endl;
+	double secondsToDelay = atof(wait);
+	
 	bool flag = true;
-
 
 	while (flag)
 	{
 		secondsPassed = (clock() - startTime) / CLOCKS_PER_SEC;
 		if (secondsPassed >= secondsToDelay)
 		{
-			ArLog::log(ArLog::Terse, "simpleMotionCommands: Pose=(%.2f,%.2f,%.2f), Trans. Vel=%.2f, Rot. Vel=%.2f, Battery=%.2fV",
-			robot.getX(), robot.getY(), robot.getTh(), robot.getVel(), robot.getRotVel(), robot.getBatteryVoltage());
+			printParametersRobot();
+		
 			flag = false;
 		}
 	}
+	return NULL;
+}
+
+
+void *printParametersRobot(void) {
+
+	double xPos = robot.getX();
+	double yPos = robot.getY();
+	double thAngular = robot.getTh();
+	timeRegister = 0.5 + timeRegister;
+	countRegisters = 1 + countRegisters;
+
+	ArLog::log(ArLog::Terse, "simpleMotionCommands: Time=%.2f , Pose=(%.2f,%.2f,%.2f), Trans. Vel=%.2f, Rot. Vel=%.2f, Battery=%.2fV",
+		timeRegister, xPos, yPos, thAngular, robot.getVel(), robot.getRotVel(), robot.getBatteryVoltage());
+	
+	writeDraw(countRegisters, timeRegister, xPos, yPos, thAngular);
+
+	return NULL;
+}
+
+
+void *writeDraw(int id, float time, double posX, double posY, double angTh) {
+
+	std::ofstream outfile;
+	outfile.open("RobotDraw.txt", std::ofstream::out | std::ofstream::app);
+
+	outfile
+		<< id << " "
+		<< time << " "
+		<< posX << " "
+		<< posY << " "
+		<< angTh << " "
+		<< std::endl;
+	outfile.close();
+	return NULL;
+}
+
+void *writeHead() {
+	clearOutput();
+	std::ofstream outfile;
+	outfile.open("RobotDraw.txt", std::ofstream::out | std::ofstream::app);
+
+	outfile
+		<< "id "
+		<< "time "
+		<< "x "
+		<< "y "
+		<< "th"
+		<< std::endl;
+	outfile.close();
+	return NULL;
+}
+
+void *clearOutput() {
+	std::ofstream outfile("RobotDraw.txt");
+	outfile<<"";
+	outfile.close();
 	return NULL;
 }
 
