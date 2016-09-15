@@ -1,9 +1,19 @@
-//probe cicle 2
 //add lib Aria MobilesRobot
 #include "Aria.h"
+//include operation with strings
+#include <string.h>
+//include inn and out console
+#include <iostream>
+//include lib of time
+#include <ctime>
+#include <cstdlib>
 
+using namespace std;
 
 void *printConsole(const char *message, int mode);
+void *delay(void);
+
+static ArRobot robot;
 
 //Main Method
 int main(int argc, char **argv)
@@ -12,7 +22,7 @@ int main(int argc, char **argv)
 	Aria::init();
 	ArArgumentParser parser(&argc, argv);
 	parser.loadDefaultArguments();
-	ArRobot robot;
+	
 	ArRobotConnector robotConnector(&parser, &robot);
 
 	if (!robotConnector.connectRobot())
@@ -32,6 +42,12 @@ int main(int argc, char **argv)
 	printConsole("teleopActionsExample: Connected.", 2);
 
 
+	// Connector for laser rangefinders
+	ArLaserConnector laserConnector(&parser, &robot, &robotConnector);
+
+	// Connector for compasses
+	ArCompassConnector compassConnector(&parser);
+
 	//Limites de velocidad y rotacion en base a los datos recibidos por los sensores de ultrasonido
 
 	// limiter for close obstacles
@@ -49,6 +65,9 @@ int main(int argc, char **argv)
 
 	// sonar device, used by the limiter actions.
 	ArSonarDevice sonar;
+
+	// subcribe Analog Gyro
+	ArAnalogGyro gyro(&robot);
 
 
 	if (!joydriveAct.joystickInited())
@@ -73,10 +92,37 @@ int main(int argc, char **argv)
 	//priority low
 	joydriveAct.setStopIfNoButtonPressed(false);
 
+/*
+	double xPosition = robot.getX();
+	double yPosition = robot.getY();
+	double thAngular = robot.getTh();
+
+	char posX[sizeof(xPosition)];
+	memcpy(&posX, &xPosition, sizeof(xPosition));
+
+	printConsole("Pos in X", 3);
+	printConsole(posX,3);
+	*/
+
+	
+
 	// run the robot, true means that the run will exit if connection lost
-	robot.run(true);
+	robot.runAsync(true);
+
+
+
+	while (true) {
+		delay();
+	}
+
+
+	// Block execution of the main thread here and wait for the robot's task loop
+	// thread to exit (e.g. by robot disconnecting, escape key pressed, or OS
+	// signal)
+	robot.waitForRunExit();
 
 	Aria::exit(0);
+	return 0;
 	
 }
 
@@ -93,11 +139,32 @@ void *printConsole(const char *message, int mode) {
 		break;
 	case 3:
 		printf(message);
-		printf("/n");
+		printf("\n");
 		break;
 	}
 	printf("-------------------------------------\n");
 
+	return NULL;
+}
+
+void *delay(void) {
+	clock_t startTime = clock(); //Start timer
+	double secondsPassed;
+	double secondsToDelay = atof("0.5");
+	std::cout << "Time to delay: " << secondsToDelay << std::endl;
+	bool flag = true;
+
+
+	while (flag)
+	{
+		secondsPassed = (clock() - startTime) / CLOCKS_PER_SEC;
+		if (secondsPassed >= secondsToDelay)
+		{
+			ArLog::log(ArLog::Terse, "simpleMotionCommands: Pose=(%.2f,%.2f,%.2f), Trans. Vel=%.2f, Rot. Vel=%.2f, Battery=%.2fV",
+			robot.getX(), robot.getY(), robot.getTh(), robot.getVel(), robot.getRotVel(), robot.getBatteryVoltage());
+			flag = false;
+		}
+	}
 	return NULL;
 }
 
