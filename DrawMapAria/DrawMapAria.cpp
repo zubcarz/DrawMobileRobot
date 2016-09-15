@@ -7,12 +7,17 @@
 //include lib of time
 #include <ctime>
 #include <cstdlib>
+// constructor create files of text
+#include <fstream>  
 
 using namespace std;
 
 void *printConsole(const char *message, int mode);
 void *delay(const char *wait);
 void *printParametersRobot(void);
+void *writeDraw(int id, float time, double posX, double posY, double angTh);
+void *writeHead();
+void *clearOutput();
 
 static ArRobot robot;
 static int countRegisters;
@@ -96,23 +101,14 @@ int main(int argc, char **argv)
 	//priority low
 	joydriveAct.setStopIfNoButtonPressed(false);
 
-/*
-	double xPosition = robot.getX();
-	double yPosition = robot.getY();
-	double thAngular = robot.getTh();
-
-	char posX[sizeof(xPosition)];
-	memcpy(&posX, &xPosition, sizeof(xPosition));
-
-	printConsole("Pos in X", 3);
-	printConsole(posX,3);
-	*/
-
 	// run the robot, true means that the run will exit if connection lost
 	robot.runAsync(true);
 
+	writeHead();
+	
 	//print sample time 
 	std::cout << "Time to delay: " << secondsToDelay << std::endl;
+	
 	while (true) {
 		delay(secondsToDelay);
 	}
@@ -121,10 +117,9 @@ int main(int argc, char **argv)
 	// thread to exit (e.g. by robot disconnecting, escape key pressed, or OS
 	// signal)
 	robot.waitForRunExit();
-
+	
 	Aria::exit(0);
 	return 0;
-	
 }
 
 // view message in console 
@@ -194,5 +189,48 @@ void *printParametersRobot(void) {
 	ArLog::log(ArLog::Terse, "simpleMotionCommands: Time=%.2f , Pose=(%.2f,%.2f,%.2f), Trans. Vel=%.2f, Rot. Vel=%.2f, Battery=%.2fV",
 		timeRegister, xPos, yPos, thAngular, robot.getVel(), robot.getRotVel(), robot.getBatteryVoltage());
 	
+	writeDraw(countRegisters, timeRegister, xPos, yPos, thAngular);
+
 	return NULL;
 }
+
+
+void *writeDraw(int id, float time, double posX, double posY, double angTh) {
+
+	std::ofstream outfile;
+	outfile.open("RobotDraw.txt", std::ofstream::out | std::ofstream::app);
+
+	outfile
+		<< id << " "
+		<< time << " "
+		<< posX << " "
+		<< posY << " "
+		<< angTh << " "
+		<< std::endl;
+	outfile.close();
+	return NULL;
+}
+
+void *writeHead() {
+	clearOutput();
+	std::ofstream outfile;
+	outfile.open("RobotDraw.txt", std::ofstream::out | std::ofstream::app);
+
+	outfile
+		<< "id "
+		<< "time "
+		<< "x "
+		<< "y "
+		<< "th"
+		<< std::endl;
+	outfile.close();
+	return NULL;
+}
+
+void *clearOutput() {
+	std::ofstream outfile("RobotDraw.txt");
+	outfile<<"";
+	outfile.close();
+	return NULL;
+}
+
